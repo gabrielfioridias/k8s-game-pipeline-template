@@ -41,6 +41,12 @@ jobs:
           doctl registry create ${{ steps.vars.outputs.reg_name }} || \
             echo "Registry already exists"
 
+      - name: Link Registry to Cluster
+        run: |
+          doctl registry kubernetes cluster create \
+            ${{ steps.vars.outputs.reg_name }} \
+            demo-cluster || echo "Link already exists"
+
       - name: Extract registry info
         id: registry
         run: |
