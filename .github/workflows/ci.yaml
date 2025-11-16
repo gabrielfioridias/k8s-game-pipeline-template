@@ -28,6 +28,7 @@ jobs:
 
       # Build
       - name: Build Docker image
+        id: build
         run: |
           TAG_LATEST="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
           TAG_RUN="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:build-${{ github.run_number }}"
@@ -46,5 +47,5 @@ jobs:
       # Push
       - name: Push Docker image
         run: |
-          docker push "${{ steps.build-and-push.outputs.tag_latest }}"
-          d
+          docker push "${{ steps.build.outputs.tag_latest }}"
+          docker push "${{ steps.build.outputs.tag_run }}"
