@@ -11,36 +11,26 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
+    env:
+      REGISTRY: registry.digitalocean.com/k8sgametemplate-${{ github.actor_id }}
+      IMAGE_NAME: k8sgame
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Baixa o artifact gerado pelo workflow de infra
-      - name: Download infra artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: infra-data
-
-      # Parseia infra.json para extrair o registry server
-      - name: Load infra config
-        id: infra
-        run: |
-          REG_SERVER=$(jq -r '.registry_server' infra.json)
-          echo "registry_server=$REG_SERVER" >> $GITHUB_OUTPUT
-
-      # Login no Container Registry da DigitalOcean
+      # Login no Container Registry da DO
       - name: Docker login
         run: |
           echo "${{ secrets.DO_TOKEN }}" | docker login \
-            ${{ steps.infra.outputs.registry_server }} \
+            ${{ env.REGISTRY }} \
             -u "do" --password-stdin
 
-      # Build da imagem
+      # Build
       - name: Build Docker image
         run: |
-          IMAGE="${{ steps.infra.outputs.registry_server }}/k8sgame"
-          TAG_LATEST="$IMAGE:latest"
-          TAG_RUN="$IMAGE:build-${{ github.run_number }}"
+          TAG_LATEST="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          TAG_RUN="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:build-${{ github.run_number }}"
 
           echo "Building image: $TAG_LATEST and $TAG_RUN"
 
@@ -50,11 +40,11 @@ jobs:
             -f Game/Dockerfile \
             Game
 
-          echo "image_latest=$TAG_LATEST" >> $GITHUB_OUTPUT
-          echo "image_run=$TAG_RUN" >> $GITHUB_OUTPUT
+          echo "tag_latest=$TAG_LATEST" >> $GITHUB_OUTPUT
+          echo "tag_run=$TAG_RUN" >> $GITHUB_OUTPUT
 
       # Push
       - name: Push Docker image
         run: |
-          docker push "${{ steps.build-and-push.outputs.image_latest }}"
-          docker push "${{ steps.build-and-push.outputs.image_run }}"
+          docker push "${{ steps.build-and-push.outputs.tag_latest }}"
+          d
