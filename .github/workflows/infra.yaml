@@ -20,8 +20,9 @@ jobs:
       - name: Compute dynamic variables
         id: vars
         run: |
-          REG_NAME="${{ github.actor }}-k8sgametemplate"
+          REG_NAME="${{ github.actor_id }}-k8sgametemplate"
           echo "reg_name=$REG_NAME" >> $GITHUB_OUTPUT
+          echo "Registry name: $REG_NAME"
 
       - name: Create Kubernetes Cluster
         run: |
