@@ -86,7 +86,7 @@ jobs:
 
       # Salva o kubeconfig no GitHub Secrets automaticamente
       - name: Save kubeconfig to GitHub Secrets
-        uses: gliech/create-github-secret-action@v1
-        with:
-          secret-name: KUBECONFIG
-          secret-value: ${{ steps.kube.outputs.value }}
+        run: |
+          echo "${{ steps.kube.outputs.value }}" | gh secret set KUBECONFIG
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
