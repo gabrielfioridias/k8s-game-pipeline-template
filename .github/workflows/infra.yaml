@@ -12,76 +12,57 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Instala e configura o doctl
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DO_TOKEN }}
 
-      # Define variáveis (registry único baseado no username)
-      - name: Set dynamic variables
+      - name: Compute dynamic variables
         id: vars
         run: |
           REG_NAME="${{ github.actor }}-k8sgametemplate"
           echo "reg_name=$REG_NAME" >> $GITHUB_OUTPUT
 
-      # Criação do cluster Kubernetes
       - name: Create Kubernetes Cluster
         run: |
-          echo "Creating Kubernetes cluster..."
           doctl kubernetes cluster create demo-cluster \
             --region=nyc1 \
             --version=latest \
             --tag=demo \
             --node-pool "name=np1;size=s-2vcpu-4gb;count=1" || \
-            echo "Cluster may already exist"
+            echo "Cluster already exists"
 
-      # Aguarda ficar pronto
       - name: Wait for Cluster Readiness
-        run: |
-          echo "Waiting for Kubernetes cluster to become ready..."
-          doctl kubernetes cluster wait demo-cluster
+        run: doctl kubernetes cluster wait demo-cluster
 
-      # Criação do Container Registry
       - name: Create Container Registry
         run: |
-          echo "Creating Container Registry..."
           doctl registry create ${{ steps.vars.outputs.reg_name }} || \
-            echo "Registry may already exist"
+            echo "Registry already exists"
 
-      # Pega informações do registry
       - name: Extract registry info
         id: registry
         run: |
-          REG_NAME="${{ steps.vars.outputs.reg_name }}"
-          SERVER=$(doctl registry get $REG_NAME --format Server | tail -n 1)
+          SERVER=$(doctl registry get ${{ steps.vars.outputs.reg_name }} --format Server | tail -n 1)
+          echo "server=$SERVER" >> $GITHUB_OUTPUT
 
-          echo "registry_server=$SERVER" >> $GITHUB_OUTPUT
-          echo "registry_username=do" >> $GITHUB_OUTPUT
-          echo "registry_name=$REG_NAME" >> $GITHUB_OUTPUT
-
-      # Baixa o kubeconfig
       - name: Download kubeconfig
-        id: kube
         run: |
-          mkdir -p kube
+          mkdir -p infra-output
           doctl kubernetes cluster kubeconfig save demo-cluster
-          cp ~/.kube/config kube/kubeconfig
+          cp ~/.kube/config infra-output/kubeconfig
 
-          # Converte para string única
-          KCFG=$(sed ':a;N;$!ba;s/\n/\\n/g' kube/kubeconfig)
-          echo "value=$KCFG" >> $GITHUB_OUTPUT
-
-      # Instala GitHub CLI (gh)
-      - name: Install GH CLI
-        uses: cli/cli-action@v2
-
-      # Salva todos os secrets necessários
-      - name: Save secrets to GitHub
+      - name: Create infra.json
         run: |
-          echo "${{ steps.kube.outputs.value }}"          | gh secret set KUBECONFIG
-          echo "${{ steps.registry.outputs.registry_name }}"   | gh secret set DOCR_REGISTRY
-          echo "${{ steps.registry.outputs.registry_server }}" | gh secret set DOCR_SERVER
-          echo "${{ steps.registry.outputs.registry_username }}" | gh secret set DOCR_USERNAME
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "{" > infra-output/infra.json
+          echo "\"registry_name\": \"${{ steps.vars.outputs.reg_name }}\"," >> infra-output/infra.json
+          echo "\"registry_server\": \"${{ steps.registry.outputs.server }}\"," >> infra-output/infra.json
+          echo "\"registry_username\": \"do\"," >> infra-output/infra.json
+          echo "\"kubeconfig\": \"$(sed ':a;N;$!ba;s/\n/\\n/g' infra-output/kubeconfig)\"" >> infra-output/infra.json
+          echo "}" >> infra-output/infra.json
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: infra-data
+          path: infra-output
