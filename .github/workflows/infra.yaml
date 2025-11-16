@@ -5,7 +5,7 @@ on:
 
 jobs:
   create-infra:
-    name: Create DigitalOcean Kubernetes Cluster
+    name: Create Kubernetes Cluster + Registry
     runs-on: ubuntu-latest
 
     steps:
@@ -17,6 +17,37 @@ jobs:
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DO_TOKEN }}
+
+      # Gera nome único para o Container Registry
+      - name: Define registry name
+        id: reg
+        run: |
+          REGISTRY_NAME="${{ github.actor }}-k8sgametemplate"
+          REGISTRY_URL="registry.digitalocean.com/${REGISTRY_NAME}"
+
+          echo "REGISTRY_NAME=$REGISTRY_NAME" >> $GITHUB_OUTPUT
+          echo "REGISTRY_URL=$REGISTRY_URL" >> $GITHUB_OUTPUT
+
+      # Criação do Container Registry (ignora erro se já existir)
+      - name: Create Container Registry
+        run: |
+          echo "Creating registry ${{ steps.reg.outputs.REGISTRY_NAME }} ..."
+          doctl registry create \
+             ${{ steps.reg.outputs.REGISTRY_NAME }} \
+             --subscription-tier basic || echo "Registry may already exist"
+
+      # Salva nome e URL do registry nas secrets
+      - name: Save registry info to GitHub Secrets
+        uses: gliech/create-github-secret-action@v1
+        with:
+          secret-name: REGISTRY_NAME
+          secret-value: ${{ steps.reg.outputs.REGISTRY_NAME }}
+
+      - name: Save registry URL to GitHub Secrets
+        uses: gliech/create-github-secret-action@v1
+        with:
+          secret-name: REGISTRY_URL
+          secret-value: ${{ steps.reg.outputs.REGISTRY_URL }}
 
       # Criação do cluster
       - name: Create Kubernetes Cluster
@@ -35,6 +66,12 @@ jobs:
           echo "Waiting for Kubernetes cluster to become ready..."
           doctl kubernetes cluster wait demo-cluster
 
+      # Linka o registry ao cluster (pull secrets automáticos)
+      - name: Link Registry to Kubernetes Cluster
+        run: |
+          echo "Linking registry to cluster..."
+          doctl kubernetes cluster registry add demo-cluster ${{ steps.reg.outputs.REGISTRY_NAME }} || echo "Already linked"
+
       # Baixa o kubeconfig
       - name: Download kubeconfig
         id: kube
@@ -43,11 +80,7 @@ jobs:
           doctl kubernetes cluster kubeconfig save demo-cluster
           cp ~/.kube/config kube/kubeconfig
 
-          echo "===== KUBECONFIG BEGIN ====="
-          cat kube/kubeconfig
-          echo "===== KUBECONFIG END ====="
-
-          # Converte o kubeconfig para string única (necessário para secrets)
+          # Converte kubeconfig para string única (necessário para secrets)
           KUBECONFIG_CONTENT=$(sed ':a;N;$!ba;s/\n/\\n/g' kube/kubeconfig)
           echo "value=$KUBECONFIG_CONTENT" >> $GITHUB_OUTPUT
 
