@@ -17,16 +17,9 @@ jobs:
         with:
           token: ${{ secrets.DO_TOKEN }}
 
-      - name: Compute dynamic variables
-        id: vars
-        run: |
-          REG_NAME="k8sgametemplate-${{ github.actor_id }}"
-          echo "reg_name=$REG_NAME" >> $GITHUB_OUTPUT
-          echo "Registry name: $REG_NAME"
-
       - name: Create Kubernetes Cluster
         run: |
-          doctl kubernetes cluster create demo-cluster \
+          doctl kubernetes cluster create k8sgametemplate-cluster \
             --region=nyc1 \
             --version=latest \
             --tag=demo \
@@ -38,36 +31,10 @@ jobs:
 
       - name: Create Container Registry
         run: |
-          doctl registry create ${{ steps.vars.outputs.reg_name }} || \
+          doctl registry create "k8sgametemplate-${{ github.actor_id }}" || \
             echo "Registry already exists"
 
       - name: Link Registry to Cluster
         run: |
-          doctl kubernetes cluster registry add demo-cluster || echo "Link already exists"
-
-      - name: Extract registry info
-        id: registry
-        run: |
-          SERVER=$(doctl registry get ${{ steps.vars.outputs.reg_name }} --format Server | tail -n 1)
-          echo "server=$SERVER" >> $GITHUB_OUTPUT
-
-      - name: Download kubeconfig
-        run: |
-          mkdir -p infra-output
-          doctl kubernetes cluster kubeconfig save demo-cluster
-          cp ~/.kube/config infra-output/kubeconfig
-
-      - name: Create infra.json
-        run: |
-          echo "{" > infra-output/infra.json
-          echo "\"registry_name\": \"${{ steps.vars.outputs.reg_name }}\"," >> infra-output/infra.json
-          echo "\"registry_server\": \"${{ steps.registry.outputs.server }}\"," >> infra-output/infra.json
-          echo "\"registry_username\": \"do\"," >> infra-output/infra.json
-          echo "\"kubeconfig\": \"$(sed ':a;N;$!ba;s/\n/\\n/g' infra-output/kubeconfig)\"" >> infra-output/infra.json
-          echo "}" >> infra-output/infra.json
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: infra-data
-          path: infra-output
+          doctl kubernetes cluster registry add demo-cluster || \
+            echo "Link already exists"
