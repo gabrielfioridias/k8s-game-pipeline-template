@@ -83,3 +83,15 @@ jobs:
               \"domainName\": \"${DOMAIN_NAME}\",
               \"ipAddress\": \"${{ steps.nginxip.outputs.lb_ip }}\"
             }"
+
+      - name: Trigger CI-CD
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: "ci-cd.yml",
+              ref: "main"
+            });
