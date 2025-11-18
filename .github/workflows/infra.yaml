@@ -49,7 +49,7 @@ jobs:
         run: |
           echo "Aguardando IP do LoadBalancer do NGINX..."
 
-          for i in {1..30}; do
+          for i in {1..90}; do
             # Pega o primeiro IP listado
             LB_IP=$(doctl compute load-balancer list --format IP --no-header | head -n 1)
             
