@@ -3,6 +3,58 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const socket = io();
 
+// Áudio (WebAudio) - som ao passar por um cano
+let audioCtx = null;
+function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playPassSound() {
+    try {
+        if (!audioCtx) initAudio();
+        const now = audioCtx.currentTime;
+        // mais agudo e um pouco mais alto; curtíssimo envelope
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(1500, now); // mais agudo
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.22, now + 0.005); // mais alto
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        o.start(now);
+        o.stop(now + 0.14);
+    } catch (e) {
+        // falha silenciosa — não bloquear jogo se áudio não suportado
+        console.warn('Audio play failed', e);
+    }
+}
+
+function playJumpSound() {
+    try {
+        if (!audioCtx) initAudio();
+        const now = audioCtx.currentTime;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        // som curto tipo "flap" — timbre mais cheio
+        o.type = 'square';
+        o.frequency.setValueAtTime(700, now);
+        // pitch rápido descendente
+        o.frequency.linearRampToValueAtTime(450, now + 0.06);
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.16, now + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        o.start(now);
+        o.stop(now + 0.12);
+    } catch (e) {
+        console.warn('Jump audio failed', e);
+    }
+}
+
 // Elementos da interface
 const scoreElement = document.getElementById('score');
 const playerNameDisplay = document.getElementById('playerNameDisplay');
@@ -112,7 +164,8 @@ function generatePipe() {
         x: canvas.width,
         topHeight: topHeight,
         bottomY: topHeight + PIPE_GAP,
-        passed: false
+        passed: false,
+        midPlayed: false
     });
 }
 
@@ -124,7 +177,13 @@ function jump() {
     }
     
     if (game.gameRunning) {
+        // Garantir que o AudioContext foi inicializado por uma interação do usuário
+        initAudio();
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
         game.penguin.velocity = game.penguin.jump;
+        // som de flap ao pular
+        playJumpSound();
     }
 }
 
@@ -248,44 +307,52 @@ function sendGameState() {
 }
 
 // Atualizar jogo
-function updateGame() {
+function updateGame(dtScale, timestamp) {
     if (!game.gameRunning) return;
-    
-    // Atualizar pinguim
-    game.penguin.velocity += game.penguin.gravity;
-    game.penguin.y += game.penguin.velocity;
-    
+
+    // Atualizar pinguim (escala pela variação de tempo)
+    game.penguin.velocity += game.penguin.gravity * dtScale;
+    game.penguin.y += game.penguin.velocity * dtScale;
+
     // Atualizar canos
     game.pipes.forEach((pipe, index) => {
-        pipe.x -= PIPE_SPEED;
-        
-        // Verificar se passou pelo cano
+        pipe.x -= PIPE_SPEED * dtScale;
+
+        // Verificar se passou pelo ponto médio do cano (tocar som mais cedo)
+        if (!pipe.midPlayed && pipe.x + PIPE_WIDTH / 2 < game.penguin.x) {
+            pipe.midPlayed = true;
+            // Tocar som ao passar pelo centro do cano
+            playPassSound();
+        }
+
+        // Verificar se passou pelo cano (pontuação)
         if (!pipe.passed && pipe.x + PIPE_WIDTH < game.penguin.x) {
             pipe.passed = true;
             game.score++;
             scoreElement.textContent = game.score;
             socket.emit('scoreUpdate', game.score);
         }
-        
+
         // Remover canos que saíram da tela
         if (pipe.x + PIPE_WIDTH < 0) {
             game.pipes.splice(index, 1);
         }
     });
-    
+
     // Gerar novos canos
     if (game.pipes.length === 0 || game.pipes[game.pipes.length - 1].x < canvas.width - 200) {
         generatePipe();
     }
-    
+
     // Verificar colisões
     if (checkCollisions()) {
         gameOver();
     }
-    
-    // Enviar estado do jogo para espectadores (a cada 3 frames para otimizar)
-    if (frameCount % 3 === 0) {
+
+    // Enviar estado do jogo para espectadores: throttle por tempo (50ms)
+    if (timestamp && (timestamp - lastStateSentAt) >= 50) {
         sendGameState();
+        lastStateSentAt = timestamp;
     }
 }
 
@@ -318,21 +385,28 @@ function drawStartScreen() {
 
 // Contador de frames para otimização
 let frameCount = 0;
+let lastTimestamp = null;
+let lastStateSentAt = 0; // ms, throttle sending gameState to spectators
 
 // Loop principal do jogo
-function gameLoop() {
+function gameLoop(timestamp) {
+    if (!lastTimestamp) lastTimestamp = timestamp;
+    const dt = (timestamp - lastTimestamp) / 1000; // seconds since last frame
+    const dtScale = dt * 60; // 1 at ~60 FPS, >1 when FPS lower
+    lastTimestamp = timestamp;
+
     frameCount++;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     if (!game.gameStarted) {
         drawStartScreen();
     } else {
         drawBackground();
         drawPipes();
         drawPenguin();
-        updateGame();
+        updateGame(dtScale, timestamp);
     }
-    
+
     requestAnimationFrame(gameLoop);
 }
 
