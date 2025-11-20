@@ -2,12 +2,50 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const socket = io();
-
 // Áudio por arquivo (pass.wav / flap.wav) - sem fallback por síntese
 const passAudio = new Audio('pass.wav');
 passAudio.preload = 'auto';
 const flapAudio = new Audio('flap.wav');
 flapAudio.preload = 'auto';
+
+// Offscreen background buffer to avoid expensive redraws each frame
+let bgCanvas = null;
+let bgCtx = null;
+let bgNeedsUpdate = true;
+
+function renderBackgroundBuffer() {
+    if (!bgCanvas) {
+        bgCanvas = document.createElement('canvas');
+        bgCtx = bgCanvas.getContext('2d');
+    }
+    if (bgCanvas.width !== canvas.width || bgCanvas.height !== canvas.height) {
+        bgCanvas.width = canvas.width;
+        bgCanvas.height = canvas.height;
+    }
+
+    // Céu gradiente
+    const gradient = bgCtx.createLinearGradient(0, 0, 0, bgCanvas.height);
+    gradient.addColorStop(0, '#74b9ff');
+    gradient.addColorStop(1, '#0984e3');
+    bgCtx.fillStyle = gradient;
+    bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+
+    // Nuvens simples
+    bgCtx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    bgCtx.beginPath();
+    bgCtx.arc(100, 100, 30, 0, Math.PI * 2);
+    bgCtx.arc(120, 100, 40, 0, Math.PI * 2);
+    bgCtx.arc(140, 100, 30, 0, Math.PI * 2);
+    bgCtx.fill();
+
+    bgCtx.beginPath();
+    bgCtx.arc(300, 150, 25, 0, Math.PI * 2);
+    bgCtx.arc(315, 150, 35, 0, Math.PI * 2);
+    bgCtx.arc(330, 150, 25, 0, Math.PI * 2);
+    bgCtx.fill();
+
+    bgNeedsUpdate = false;
+}
 
 function playPassSound() {
     try {
@@ -252,26 +290,8 @@ function drawPipes() {
 
 // Desenhar fundo
 function drawBackground() {
-    // Céu
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, '#74b9ff');
-    gradient.addColorStop(1, '#0984e3');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Nuvens simples
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    ctx.beginPath();
-    ctx.arc(100, 100, 30, 0, Math.PI * 2);
-    ctx.arc(120, 100, 40, 0, Math.PI * 2);
-    ctx.arc(140, 100, 30, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.beginPath();
-    ctx.arc(300, 150, 25, 0, Math.PI * 2);
-    ctx.arc(315, 150, 35, 0, Math.PI * 2);
-    ctx.arc(330, 150, 25, 0, Math.PI * 2);
-    ctx.fill();
+    if (bgNeedsUpdate) renderBackgroundBuffer();
+    if (bgCanvas) ctx.drawImage(bgCanvas, 0, 0);
 }
 
 // Verificar colisões
