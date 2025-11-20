@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: k8sgame
-          image: registry.digitalocean.com/k8sgametemplate-84293663/k8sgame:latest
+          image: {{ImageFullName}}
           ports:
             - containerPort: 3000
           imagePullPolicy: Always
