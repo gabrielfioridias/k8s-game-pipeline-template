@@ -16,6 +16,8 @@ let leaderboard = [];
 let gameStates = new Map(); // Armazenar estados dos jogos em tempo real
 // Seed determinístico compartilhado entre clientes para gerar canos idênticos
 const GAME_SEED = Math.floor(Math.random() * 1e9);
+// Conjunto de sockets que estão na tela de leaderboard (espectadores)
+const spectators = new Set();
 
 // Rota principal
 app.get('/', (req, res) => {
@@ -29,11 +31,8 @@ io.on('connection', (socket) => {
     // enviar seed do jogo para que clientes gerem mapas idênticos
     socket.emit('gameSeed', GAME_SEED);
 
-    // Enviar estado inicial do leaderboard e do líder atual ao conectar (útil para páginas espectadoras)
-    // Isso garante que clientes que apenas abrem a página de ranking recebam o estado atual
-    if (leaderboard && leaderboard.length > 0) {
-        socket.emit('leaderboardUpdate', leaderboard);
-    }
+    // Não emitir leaderboard automaticamente aqui; clientes que estiverem
+    // na tela de ranking devem enviar 'spectatorJoin' para receber updates.
     const currentLeaderOnConnect = getCurrentLeader();
     if (currentLeaderOnConnect) {
         const leaderGameState = gameStates.get(currentLeaderOnConnect.id);
@@ -54,8 +53,7 @@ io.on('connection', (socket) => {
             isPlaying: false
         });
         
-        // Enviar leaderboard atual
-        socket.emit('leaderboardUpdate', leaderboard);
+        // não enviar leaderboard aqui — apenas espectadores recebem esse evento
         
         // Enviar estado do jogo do líder atual (se existir)
         const currentLeader = getCurrentLeader();
@@ -77,6 +75,12 @@ io.on('connection', (socket) => {
             player.isPlaying = true;
             player.score = 0;
         }
+    });
+
+    // Registro simples para clientes que estão na tela de leaderboard
+    socket.on('spectatorJoin', () => {
+        spectators.add(socket.id);
+        socket.emit('leaderboardUpdate', leaderboard);
     });
 
     // Receber estado do jogo em tempo real
@@ -141,8 +145,11 @@ io.on('connection', (socket) => {
             // Atualizar leaderboard
             updateLeaderboard(player.name, finalScore);
             
-            // Enviar leaderboard atualizado para todos
-            io.emit('leaderboardUpdate', leaderboard);
+            // Enviar leaderboard atualizado apenas para espectadores
+            spectators.forEach(id => {
+                const sock = io.sockets.sockets.get(id);
+                if (sock) sock.emit('leaderboardUpdate', leaderboard);
+            });
             
             // Se o líder terminou o jogo, encontrar novo líder
             if (wasLeader) {
@@ -170,6 +177,8 @@ io.on('connection', (socket) => {
         
         players.delete(socket.id);
         gameStates.delete(socket.id);
+        // remover de spectators caso estivesse registrado
+        spectators.delete(socket.id);
         
         // Se o líder desconectou, encontrar novo líder
         if (wasLeader) {
