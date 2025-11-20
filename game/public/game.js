@@ -85,6 +85,30 @@ let game = {
 const PIPE_WIDTH = 60;
 const PIPE_GAP = 150;
 const PIPE_SPEED = 2;
+// Deterministic pipe generation when seed is provided by server
+let GAME_SEED = null;
+let pregeneratedPipeHeights = [];
+const PREGENERATED_COUNT = 500; // number of pipes to pregenerate per run
+
+function mulberry32(a) {
+    return function() {
+        let t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t>>>14) >>> 0) / 4294967296;
+    }
+}
+
+function generatePipeHeightsFromSeed(count, seed) {
+    const arr = [];
+    const rng = mulberry32(Number(seed));
+    const minHeight = 50;
+    const maxHeight = canvas.height - PIPE_GAP - minHeight;
+    for (let i = 0; i < count; i++) {
+        arr.push(rng() * (maxHeight - minHeight) + minHeight);
+    }
+    return arr;
+}
 
 // Configurar jogador
 const playerName = localStorage.getItem('playerName') || 'Pinguim Anônimo';
@@ -92,6 +116,18 @@ playerNameDisplay.textContent = `Jogador: ${playerName}`;
 
 // Conectar ao servidor
 socket.emit('playerJoin', playerName);
+
+// Receber seed do servidor para geração determinística do mapa
+socket.on('gameSeed', (seed) => {
+    try {
+        GAME_SEED = Number(seed);
+        // pregenerate a batch of pipe heights so clients have the same layout
+        pregeneratedPipeHeights = generatePipeHeightsFromSeed(PREGENERATED_COUNT, GAME_SEED);
+        console.log('Received game seed:', GAME_SEED);
+    } catch (e) {
+        console.warn('Invalid game seed', seed);
+    }
+});
 
 // Prevenir comportamentos indesejados no mobile
 function preventMobileBehaviors() {
@@ -151,6 +187,10 @@ function initGame() {
     gameOverScreen.classList.add('hidden');
     
     socket.emit('gameStart');
+    // when starting a new run, regenerate pregenerated pipes so restarts are identical
+    if (GAME_SEED) {
+        pregeneratedPipeHeights = generatePipeHeightsFromSeed(PREGENERATED_COUNT, GAME_SEED);
+    }
     generatePipe();
 }
 
@@ -158,7 +198,12 @@ function initGame() {
 function generatePipe() {
     const minHeight = 50;
     const maxHeight = canvas.height - PIPE_GAP - minHeight;
-    const topHeight = Math.random() * (maxHeight - minHeight) + minHeight;
+    let topHeight;
+    if (pregeneratedPipeHeights && pregeneratedPipeHeights.length > 0) {
+        topHeight = pregeneratedPipeHeights.shift();
+    } else {
+        topHeight = Math.random() * (maxHeight - minHeight) + minHeight;
+    }
     
     game.pipes.push({
         x: canvas.width,

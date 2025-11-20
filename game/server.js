@@ -14,6 +14,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 let players = new Map();
 let leaderboard = [];
 let gameStates = new Map(); // Armazenar estados dos jogos em tempo real
+// Seed determinístico compartilhado entre clientes para gerar canos idênticos
+const GAME_SEED = Math.floor(Math.random() * 1e9);
 
 // Rota principal
 app.get('/', (req, res) => {
@@ -23,6 +25,9 @@ app.get('/', (req, res) => {
 // Conexões Socket.IO
 io.on('connection', (socket) => {
     console.log('Usuário conectado:', socket.id);
+
+    // enviar seed do jogo para que clientes gerem mapas idênticos
+    socket.emit('gameSeed', GAME_SEED);
 
     // Jogador entra no jogo
     socket.on('playerJoin', (playerName) => {
