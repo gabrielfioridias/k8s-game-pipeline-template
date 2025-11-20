@@ -29,6 +29,22 @@ io.on('connection', (socket) => {
     // enviar seed do jogo para que clientes gerem mapas idênticos
     socket.emit('gameSeed', GAME_SEED);
 
+    // Enviar estado inicial do leaderboard e do líder atual ao conectar (útil para páginas espectadoras)
+    // Isso garante que clientes que apenas abrem a página de ranking recebam o estado atual
+    if (leaderboard && leaderboard.length > 0) {
+        socket.emit('leaderboardUpdate', leaderboard);
+    }
+    const currentLeaderOnConnect = getCurrentLeader();
+    if (currentLeaderOnConnect) {
+        const leaderGameState = gameStates.get(currentLeaderOnConnect.id);
+        if (leaderGameState) {
+            socket.emit('leaderGameState', {
+                playerName: currentLeaderOnConnect.name,
+                gameState: leaderGameState
+            });
+        }
+    }
+
     // Jogador entra no jogo
     socket.on('playerJoin', (playerName) => {
         players.set(socket.id, {
