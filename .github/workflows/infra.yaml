@@ -31,7 +31,7 @@ jobs:
 
       - name: Create Container Registry
         run: |
-          doctl registry create "k8sgametemplate-${{ github.actor_id }}" || \
+          doctl registry create "k8sgametemplate-${{ github.repository_id }}" || \
             echo "Error creating registry or registry already exists"
 
       - name: Link Container Registry to K8s Cluster
