@@ -3,55 +3,27 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const socket = io();
 
-// Áudio (WebAudio) - som ao passar por um cano
-let audioCtx = null;
-function initAudio() {
-    if (audioCtx) return;
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-}
+// Áudio por arquivo (pass.wav / flap.wav) - sem fallback por síntese
+const passAudio = new Audio('pass.wav');
+passAudio.preload = 'auto';
+const flapAudio = new Audio('flap.wav');
+flapAudio.preload = 'auto';
 
 function playPassSound() {
     try {
-        if (!audioCtx) initAudio();
-        const now = audioCtx.currentTime;
-        // mais agudo e um pouco mais alto; curtíssimo envelope
-        const o = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        o.type = 'sine';
-        o.frequency.setValueAtTime(1500, now); // mais agudo
-        g.gain.setValueAtTime(0.0001, now);
-        g.gain.exponentialRampToValueAtTime(0.22, now + 0.005); // mais alto
-        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
-        o.connect(g);
-        g.connect(audioCtx.destination);
-        o.start(now);
-        o.stop(now + 0.14);
+        const a = passAudio.cloneNode();
+        a.play().catch(() => {});
     } catch (e) {
-        // falha silenciosa — não bloquear jogo se áudio não suportado
-        console.warn('Audio play failed', e);
+        console.warn('playPassSound failed', e);
     }
 }
 
 function playJumpSound() {
     try {
-        if (!audioCtx) initAudio();
-        const now = audioCtx.currentTime;
-        const o = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        // som curto tipo "flap" — timbre mais cheio
-        o.type = 'square';
-        o.frequency.setValueAtTime(700, now);
-        // pitch rápido descendente
-        o.frequency.linearRampToValueAtTime(450, now + 0.06);
-        g.gain.setValueAtTime(0.0001, now);
-        g.gain.exponentialRampToValueAtTime(0.16, now + 0.005);
-        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
-        o.connect(g);
-        g.connect(audioCtx.destination);
-        o.start(now);
-        o.stop(now + 0.12);
+        const a = flapAudio.cloneNode();
+        a.play().catch(() => {});
     } catch (e) {
-        console.warn('Jump audio failed', e);
+        console.warn('playJumpSound failed', e);
     }
 }
 
@@ -222,10 +194,6 @@ function jump() {
     }
     
     if (game.gameRunning) {
-        // Garantir que o AudioContext foi inicializado por uma interação do usuário
-        initAudio();
-        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-
         game.penguin.velocity = game.penguin.jump;
         // som de flap ao pular
         playJumpSound();
