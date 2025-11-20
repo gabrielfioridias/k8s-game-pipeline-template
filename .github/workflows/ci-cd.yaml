@@ -78,7 +78,8 @@ jobs:
       - name: Aplicar manifesto com tag dinâmica
         run: |
           IMAGE_FULL_NAME="${{ needs.build-and-push.outputs.registry_path }}${{ needs.build-and-push.outputs.tag_run }}"
-          echo "Deploying image tag: $IMAGE_TAG"
 
-          sed "s|{{ImageFullName}}|:${IMAGE_FULL_NAME##*:}|g" ./package/k8sdeploy.yaml \
+          echo "Deploying image: $IMAGE_FULL_NAME"
+
+          sed "s|{{ImageFullName}}|${IMAGE_FULL_NAME}|g" ./package/k8sdeploy.yaml \
             | kubectl apply -f -
