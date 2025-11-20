@@ -616,20 +616,28 @@ function gameOver() {
 
 // Desenhar tela inicial
 function drawStartScreen() {
+    // Desenhar fundo e pinguim primeiro (o texto ficará sobreposto)
     drawBackground();
-    
-    // Título
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 36px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('🐧 Flappy Penguin', canvas.width/2, canvas.height/2 - 50);
-    
-    // Instruções
-    ctx.font = '18px Arial';
-    ctx.fillText('Pressione ESPAÇO ou clique para começar!', canvas.width/2, canvas.height/2 + 20);
-    
-    // Pinguim na posição inicial
     drawPenguin();
+
+    // Painel translúcido atrás do texto para garantir legibilidade
+    const boxWidth = Math.min(600, canvas.width);
+    const boxHeight = 120;
+    const boxX = (canvas.width - boxWidth) / 2;
+    const boxY = (canvas.height / 2) - (boxHeight / 2) - 10;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+
+    // Título e instruções por cima
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 36px Arial';
+    ctx.fillText('🐧 Flappy Penguin', canvas.width/2, boxY + 42);
+    ctx.font = '18px Arial';
+    ctx.fillText('Clique na tela para começar!', canvas.width/2, boxY + 84);
+    ctx.restore();
 }
 
 // Contador de frames para otimização
