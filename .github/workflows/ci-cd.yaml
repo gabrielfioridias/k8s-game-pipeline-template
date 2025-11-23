@@ -82,6 +82,6 @@ jobs:
 
           echo "Deploying image: $IMAGE_FULL_NAME"
 
-          sed "s|{{ImageFullName}}|${IMAGE_FULL_NAME}|g" ./package/k8sdeploy.yaml \
-            sed "s|{{HostName}}|${SANITIZED_USER}|g" ./package/k8sdeploy.yaml \
-            | kubectl apply -f -
+          sed "s|{{ImageFullName}}|${IMAGE_FULL_NAME}|g" ./package/k8sdeploy.yaml | \
+            sed "s|{{HostName}}|${SANITIZED_USER}|g" | \
+            kubectl apply -f -
