@@ -493,7 +493,7 @@ function drawOtherPlayers() {
 // Desenhar canos
 function drawPipes() {
     // Draw pipe bodies with a single fillStyle to avoid frequent state changes
-    ctx.fillStyle = '#ec7474ff';
+    ctx.fillStyle = '#27ae60';
     for (let i = 0; i < game.pipes.length; i++) {
         const pipe = game.pipes[i];
         // Cano superior
@@ -504,14 +504,14 @@ function drawPipes() {
     }
 
     // Draw pipe borders in a separate pass with a different color
-    ctx.fillStyle = '#ff3535ff';
+    ctx.fillStyle = '#229954';
     for (let i = 0; i < game.pipes.length; i++) {
         const pipe = game.pipes[i];
         ctx.fillRect(pipe.x - 5, pipe.topHeight - 30, PIPE_WIDTH + 10, 30);
         ctx.fillRect(pipe.x - 5, pipe.bottomY, PIPE_WIDTH + 10, 30);
     }
     // restore primary fillStyle for any subsequent drawing
-    ctx.fillStyle = '#ec7474ff';
+    ctx.fillStyle = '#27ae60';
 }
 
 // Desenhar fundo
