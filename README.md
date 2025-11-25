@@ -6,7 +6,7 @@ Siga os passos abaixo para criar sua infraestrutura na DigitalOcean e publicar s
    Use o link: https://m.do.co/c/a5371331c01f
 
 2. **Gere seu Token de API**  
-   No painel da DigitalOcean, acesse **API** → **Generate New Token** e crie um token com permissões de leitura/escrita.
+   No painel da DigitalOcean, acesse **API** → **Generate New Token** e crie um token com Full Access.
 
 3. **Faça um fork desse repositório** 
 
