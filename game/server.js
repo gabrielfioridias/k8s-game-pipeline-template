@@ -106,9 +106,14 @@ io.on('connection', (socket) => {
             const currentLeader = getCurrentLeader();
             if (currentLeader && currentLeader.id === socket.id) {
                 // Enviar estado do jogo para todos os espectadores
-                socket.broadcast.emit('leaderGameState', {
-                    playerName: player.name,
-                    gameState: gameState
+                io.sockets.sockets.forEach((sock) => {
+                    const isSpectator = spectators.has(sock.id);
+                    if (isSpectator) {
+                        sock.emit('leaderGameState', {
+                            playerName: player.name,
+                            gameState: gameState
+                            });
+                    }
                 });
             }
             // Emitir estado de todos os jogadores para todos os clientes
@@ -139,9 +144,14 @@ io.on('connection', (socket) => {
                 // Novo líder - enviar seu estado de jogo para todos
                 const newLeaderGameState = gameStates.get(newLeader.id);
                 if (newLeaderGameState) {
-                    io.emit('leaderGameState', {
-                        playerName: newLeader.name,
-                        gameState: newLeaderGameState
+                    io.sockets.sockets.forEach((sock) => {
+                        const isSpectator = spectators.has(sock.id);
+                        if (isSpectator) {
+                            sock.emit('leaderGameState', {
+                                playerName: newLeader.name,
+                                gameState: newLeaderGameState
+                            });
+                        }
                     });
                 }
             }
