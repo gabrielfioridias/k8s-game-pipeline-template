@@ -261,12 +261,7 @@ function _doBroadcastAllPlayers() {
     const leader = getCurrentLeader();
     const leaderId = leader ? leader.id : null;
 
-    if(BROADCAST_ONLY_LEADER && leader){
-        const payload = leader;
-        leader.gameState = gameStates.get(leader?.id) || null;
-        io.emit('allPlayersUpdate', [payload]);
-        return;
-    }
+    if(BROADCAST_ONLY_LEADER) return;
 
     // Emit tailored payload per connected socket so we can hide pipes from spectators
     io.sockets.sockets.forEach((sock) => {
