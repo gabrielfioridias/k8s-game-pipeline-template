@@ -22,7 +22,7 @@ spec:
           imagePullPolicy: Always
           env:
             - name: BROADCAST_ONLY_LEADER
-              value: "1"
+              value: "0"
             - name: BROADCAST_INTERVAL_MS
               value: "15"
 ---
