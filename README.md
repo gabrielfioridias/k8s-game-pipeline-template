@@ -5,23 +5,27 @@ Siga os passos abaixo para criar sua infraestrutura na DigitalOcean e publicar s
 1. **Crie sua conta na DigitalOcean**  
    Use o link: https://m.do.co/c/a5371331c01f
 
-2. **Gere seu Token de API**  
+2. **Coloque os dados do cartão de crédito para conseguir o free trial na DigitalOcean**  
+   Circulo na direita superior, clique em My Account e após entrar clique em "Add Payment Method".
+   Após isso é importante que apareça "Free Trial Active"
+
+4. **Gere seu Token de API**  
    No painel da DigitalOcean, acesse **API** → **Generate New Token** e crie um token com Full Access.
 
-3. **Faça um fork desse repositório** 
+5. **Faça um fork desse repositório** 
 
-4. **Adicione o token nas secrets do GitHub**  
+6. **Adicione o token nas secrets do GitHub**  
    No seu repositório, acesse:  
    **Settings** → **Secrets and Variables** → **Actions** → **New repository secret**
 
-5. **Crie a secret `DO_TOKEN`**  
+7. **Crie a secret `DO_TOKEN`**  
    - **Name:** `DO_TOKEN`  
    - **Secret:** cole o token gerado no passo 2.
 
-6. **Execute o workflow de infraestrutura**  
+8. **Execute o workflow de infraestrutura**  
    Vá até **Actions** → **Create Infrastructure** → selecione o workflow e clique em **Run workflow**.
 
-7. **Aguarde o término da pipeline**  
+9. **Aguarde o término da pipeline**  
    Assim que finalizar, acesse seu jogo pelo link:  
    ```
    https://suaconta.k8sgame.win
