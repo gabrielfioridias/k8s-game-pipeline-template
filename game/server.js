@@ -235,17 +235,13 @@ io.on('connection', (socket) => {
     });
 });
 
-// Helper: reconstruir e emitir lista de jogadores com seus estados (gameState pode ser null)
-function broadcastAllPlayers() {
-    // Throttled broadcaster: this function schedules a coalesced broadcast
-    // so we don't emit updates more often than BROADCAST_INTERVAL_MS.
-}
-
 // -- throttled broadcast implementation --
 const BROADCAST_INTERVAL_MS = 50; // minimum interval between broadcasts
 let _lastBroadcastAt = 0;
 let _broadcastTimer = null;
 let _broadcastPending = false;
+// Option: when true, broadcast payloads will include full gameState only for the leader
+const BROADCAST_ONLY_LEADER = (process.env.BROADCAST_ONLY_LEADER === '1' || process.env.BROADCAST_ONLY_LEADER === 'true');
 
 function _doBroadcastAllPlayers() {
     _broadcastTimer = null;
@@ -254,6 +250,13 @@ function _doBroadcastAllPlayers() {
 
     const leader = getCurrentLeader();
     const leaderId = leader ? leader.id : null;
+
+    if(BROADCAST_ONLY_LEADER && leader){
+        const payload = leader;
+        leader.gameState = gameStates.get(leader?.id) || null;
+        io.emit('allPlayersUpdate', [payload]);
+        return;
+    }
 
     // Emit tailored payload per connected socket so we can hide pipes from spectators
     io.sockets.sockets.forEach((sock) => {
