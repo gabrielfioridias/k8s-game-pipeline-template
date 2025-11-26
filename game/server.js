@@ -384,7 +384,7 @@ setInterval(() => {
     const inactive = [];
     players.forEach((p, id) => {
         const last = p.lastActivity || 0;
-        if ((now - last) > INACTIVITY_MS) inactive.push(id);
+        if ((now - last) > INACTIVITY_MS && gameStates.get(id) != null) inactive.push(id);
     });
     if (inactive.length === 0) return;
     inactive.forEach(id => removePlayerForInactivity(id));
