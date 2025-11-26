@@ -10,7 +10,7 @@ Siga os passos abaixo para criar sua infraestrutura na DigitalOcean e publicar s
    Após isso é importante que apareça "Free Trial Active"
 
 4. **Gere seu Token de API**  
-   No painel da DigitalOcean, acesse **API** → **Generate New Token** e crie um token com Full Access.
+   No painel esquerdo da DigitalOcean, acesse **API** → **Generate New Token** e crie um token com Full Access.
 
 5. **Faça um fork desse repositório** 
 
